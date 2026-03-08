@@ -10,18 +10,18 @@ from datasets import VITONDataset, VITONDataLoader
 from networks import SegGenerator, GMM, ALIASGenerator
 from utils import gen_noise, load_checkpoint, save_images
 
-
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def get_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('--name', type=str, required=True)
 
     parser.add_argument('-b', '--batch_size', type=int, default=1)
     parser.add_argument('-j', '--workers', type=int, default=1)
-    parser.add_argument('--load_height', type=int, default=512)
-    parser.add_argument('--load_width', type=int, default=384)
+    parser.add_argument('--load_height', type=int, default=1024)
+    parser.add_argument('--load_width', type=int, default=768)
     parser.add_argument('--shuffle', action='store_true')
 
-    parser.add_argument('--dataset_dir', type=str, default='./datasets/')
+    parser.add_argument('--dataset_dir', type=str, default='./dataset/')
     parser.add_argument('--dataset_mode', type=str, default='test')
     parser.add_argument('--dataset_list', type=str, default='test_pairs.txt')
     parser.add_argument('--checkpoint_dir', type=str, default='./checkpoints/')
@@ -52,15 +52,19 @@ def get_opt():
     return opt
 
 
-def test(opt, seg, gmm, alias,device):
-    up = nn.Upsample(size=(opt.load_height, opt.load_width), mode='bilinear').to(device)
-    gauss = tgm.image.GaussianBlur((15, 15), (3, 3)).to(device)
+def test(opt, seg, gmm, alias):
+    up = nn.Upsample(size=(opt.load_height, opt.load_width), mode='bilinear')
+    gauss = tgm.image.GaussianBlur((15, 15), (3, 3))
+    gauss.to(device)
+
 
     test_dataset = VITONDataset(opt)
     test_loader = VITONDataLoader(opt, test_dataset)
 
     with torch.no_grad():
         for i, inputs in enumerate(test_loader.data_loader):
+            if i>6:
+                break
             img_names = inputs['img_name']
             c_names = inputs['c_name']['unpaired']
 
@@ -81,17 +85,7 @@ def test(opt, seg, gmm, alias,device):
             parse_pred = gauss(up(parse_pred_down))
             parse_pred = parse_pred.argmax(dim=1)[:, None]
 
-            parse_old = torch.zeros(
-            parse_pred.size(0), 13,
-            opt.load_height, opt.load_width,
-            dtype=torch.float
-            ).to(device)
-
-            parse = torch.zeros(
-                parse_pred.size(0), 7,
-                opt.load_height, opt.load_width,
-                dtype=torch.float
-            ).to(device)
+            parse_old = torch.zeros(parse_pred.size(0), 13, opt.load_height, opt.load_width, dtype=torch.float).to(device)
             parse_old.scatter_(1, parse_pred, 1.0)
 
             labels = {
@@ -103,6 +97,7 @@ def test(opt, seg, gmm, alias,device):
                 5:  ['right_arm',   [6]],
                 6:  ['noise',       [12]]
             }
+            parse = torch.zeros(parse_pred.size(0), 7, opt.load_height, opt.load_width, dtype=torch.float).to(device)
             for j in range(len(labels)):
                 for label in labels[j][1]:
                     parse[:, j] += parse_old[:, label]
@@ -153,12 +148,10 @@ def main():
     load_checkpoint(gmm, os.path.join(opt.checkpoint_dir, opt.gmm_checkpoint))
     load_checkpoint(alias, os.path.join(opt.checkpoint_dir, opt.alias_checkpoint))
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
     seg.to(device).eval()
     gmm.to(device).eval()
     alias.to(device).eval()
-    test(opt, seg, gmm, alias,device)
+    test(opt, seg, gmm, alias)
 
 
 if __name__ == '__main__':
