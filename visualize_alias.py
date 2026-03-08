@@ -1,63 +1,44 @@
-import torch
-import torchvision.utils as vutils
-from torch.utils.data import DataLoader
+import os
+import matplotlib.pyplot as plt
+from PIL import Image
 
-from cp_dataset import CPDataset
-from networks import ALIASGenerator
-from options import GMMOptions
+result_folder = "results/viton_test"
+person_folder = "dataset/test/image"
+cloth_folder = "dataset/test/cloth"
 
+files = sorted(os.listdir(result_folder))
 
-def test_alias():
+for result_name in files:
 
-    opt = GMMOptions()
+    parts = result_name.split("_")
+    person_id = parts[0]
+    cloth_id = parts[1]
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    person_path = os.path.join(person_folder, f"{person_id}_00.jpg")
+    cloth_path = os.path.join(cloth_folder, f"{cloth_id}_00.jpg")
+    output_path = os.path.join(result_folder, result_name)
 
-    dataset = CPDataset(opt)
-    dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
+    person = Image.open(person_path)
+    cloth = Image.open(cloth_path)
+    output = Image.open(output_path)
 
-    model = ALIASGenerator(opt, input_nc=9).to(device)
-    model.load_state_dict(torch.load("checkpoints/alias_final.pth", map_location=device))
+    plt.figure(figsize=(12,4))
 
-    model.eval()
+    plt.subplot(1,3,1)
+    plt.title("Person")
+    plt.imshow(person)
+    plt.axis("off")
 
-    print("ALIAS model loaded")
+    plt.subplot(1,3,2)
+    plt.title("Cloth")
+    plt.imshow(cloth)
+    plt.axis("off")
 
-    with torch.no_grad():
+    plt.subplot(1,3,3)
+    plt.title("Try-On Output")
+    plt.imshow(output)
+    plt.axis("off")
 
-        for step, data in enumerate(dataloader):
+    plt.show()
 
-            agnostic = data["agnostic"].to(device)
-            cloth = data["cloth"].to(device)
-
-            # ALIAS input (3 + 3 + 3 = 9 channels)
-            alias_input = torch.cat((agnostic, cloth, cloth), dim=1)
-
-            # segmentation (7 channels)
-            seg = torch.zeros(1, 7, opt.load_height, opt.load_width).to(device)
-
-            # misalignment mask
-            misalign_mask = torch.zeros(1, 1, opt.load_height, opt.load_width).to(device)
-
-            # segmentation + mask (8 channels)
-            seg_div = torch.cat((seg, misalign_mask), dim=1)
-
-            output = model(alias_input, seg, seg_div, misalign_mask)
-
-            result = torch.cat((agnostic, cloth, output), dim=0)
-
-            vutils.save_image(
-                result,
-                f"alias_result_{step}.png",
-                nrow=3,
-                normalize=True
-            )
-
-            print(f"Saved: alias_result_{step}.png")
-
-            if step == 5:
-                break
-
-
-if __name__ == "__main__":
-    test_alias()
+    input("Press ENTER to show next result...")
