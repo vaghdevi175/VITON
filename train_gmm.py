@@ -4,8 +4,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.nn import functional as F
 
-from datasets import VITONDataset, VITONDataLoader
-from networks import GMM
+from viton.datasets import VITONDataset, VITONDataLoader
+from viton.networks import GMM
 
 
 # -------------------------------------------------------

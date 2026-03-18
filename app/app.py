@@ -20,7 +20,7 @@ app.config['MAIL_PASSWORD'] = "qpfj ghxh pmbb vmdg"
 mail = Mail(app)
 
 
-MONGO_URI = "mongodb+srv://admin:admin123@cluster0.ovje4uh.mongodb.net/virtual_tryon"
+MONGO_URI = "mongodb+srv://admin:admin123@cluster0.ovje4uh.mongodb.net/virtual_tryon?retryWrites=true&w=majority&appName=Cluster0"
 
 client = MongoClient(MONGO_URI)
 db = client["virtual_tryon"]
