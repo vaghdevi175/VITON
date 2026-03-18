@@ -1,6 +1,37 @@
+<<<<<<< HEAD
 viton_env/
 dataset/
 checkpoints/
 __pycache__/
 *.pth
 *.pyc
+=======
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.env
+venv/
+viton_env/
+
+# Dataset
+dataset/
+
+# Model checkpoints
+viton/checkpoints/
+
+# Results
+results/
+app/static/results/
+
+# Node
+node_modules/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+>>>>>>> b285bde (Initial commit - VITON app)
