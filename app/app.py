@@ -9,18 +9,24 @@ from werkzeug.utils import secure_filename
 from pymongo import MongoClient
 import bcrypt
 from flask_mail import Mail, Message
+from dotenv import load_dotenv   # ✅ NEW
+
+# ✅ Load environment variables
+load_dotenv()
 app = Flask(__name__)
 CORS(app)
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = "vaghdevipappala@gmail.com"
-app.config['MAIL_PASSWORD'] = "qpfj ghxh pmbb vmdg"
+app.config['MAIL_USERNAME'] = os.getenv("MAIL_USERNAME")
+app.config['MAIL_PASSWORD'] = os.getenv("MAIL_PASSWORD")
+
+
 
 mail = Mail(app)
 
 
-MONGO_URI = "mongodb+srv://admin:admin123@cluster0.ovje4uh.mongodb.net/virtual_tryon?retryWrites=true&w=majority&appName=Cluster0"
+MONGO_URI = os.getenv("MONGO_URI")
 
 client = MongoClient(MONGO_URI)
 db = client["virtual_tryon"]
