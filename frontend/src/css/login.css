@@ -1,0 +1,355 @@
+/* ==========================
+   PAGE BACKGROUND
+========================== */
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  font-family: 'Poppins', sans-serif;
+  background: #f8fafc; 
+}
+
+.login-page {
+  min-height: 100vh;
+  width: 100vw;
+  display: flex;
+}
+
+/* ==========================
+   MAIN SPLIT CARD
+========================== */
+.login-split-card {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  border-radius: 0; 
+  box-shadow: none; 
+}
+
+/* ==========================
+   LEFT PANEL (Branding)
+========================== */
+.login-left {
+  width: 45%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  color: white;
+}
+
+/* PREMIUM LEFT PANEL GLOW */
+.login-left::before {
+  content: "";
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  background: rgba(255, 255, 255, 0.15); 
+  filter: blur(120px);
+  top: 20%;
+  left: 10%;
+  z-index: 2;
+}
+
+/* ✅ FIX 3: Deepened gradient overlay for better contrast */
+.login-left::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(0,0,0,0.15),
+    transparent
+  );
+  z-index: 2;
+}
+
+/* Abstract CSS Shapes */
+.shape { position: absolute; border-radius: 50%; z-index: 1; }
+/* ✅ FIX 4: Controlled boost to shape opacities */
+.shape-1 { width: 600px; height: 600px; border: 80px solid #f9a8d4; top: -150px; left: -100px; opacity: 0.35; }
+.shape-2 { width: 400px; height: 400px; background: #5b54db; bottom: -100px; left: -100px; opacity: 0.6; }
+.shape-3 { width: 500px; height: 500px; background: #eef1fc; opacity: 0.05; top: 30%; right: -250px; }
+
+/* Content layout over the shapes */
+.left-content {
+  position: relative;
+  z-index: 10;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 60px; 
+}
+
+.brand-logo { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 20px; }
+.welcome-text p { margin: 0 0 5px 0; font-size: 20px; opacity: 0.9; }
+.welcome-text h3 { margin: 5px 0 0 0; font-size: 36px; font-weight: 700; }
+
+/* ==========================
+   RIGHT PANEL (Form Container)
+========================== */
+.login-right {
+  width: 55%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: radial-gradient(
+    circle at 80% 20%,
+    rgba(102,126,234,0.15),
+    transparent 40%
+  );
+}
+
+/* Subtle glow behind card */
+.login-right::before {
+  content: "";
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  background: rgba(102,126,234,0.2);
+  filter: blur(120px);
+  z-index: 0;
+}
+
+/* ✅ FIX 1: Reduced, natural shadow */
+.form-container {
+  width: 420px;
+  padding: 40px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  position: relative; 
+  z-index: 10;
+  box-shadow: 
+    0 15px 40px rgba(0,0,0,0.15),
+    0 5px 15px rgba(0,0,0,0.08);
+  animation: fadeUp 0.5s ease;
+  transition: 0.3s;
+}
+
+/* ✅ FIX 2: Soft, realistic base shadow (contact shadow) */
+.form-container::after {
+  content: "";
+  position: absolute;
+  bottom: -15px;
+  left: 10%;
+  width: 80%;
+  height: 20px;
+  background: rgba(0,0,0,0.15);
+  filter: blur(20px);
+  border-radius: 50%;
+  z-index: -1;
+}
+
+.form-container:hover {
+  transform: translateY(-4px);
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.form-container h2 {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-top: 0;
+  margin-bottom: 25px; 
+  background: linear-gradient(135deg,#667eea,#764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.form-container h2 {
+  text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.form-container {
+  border: 1px solid rgba(255,255,255,0.4);
+}
+
+.login-right::before {
+  opacity: 0.7;
+}
+
+/* ==========================
+   NEUMORPHIC INPUTS & ICONS
+========================== */
+.input-group {
+  margin-bottom: 20px;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Input Icon Styling */
+.input-icon {
+  position: absolute;
+  left: 16px;
+  color: #94a3b8;
+  transition: color 0.3s;
+  pointer-events: none;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 16px 45px;
+  border-radius: 50px;
+  border: none;
+  background: #f8fafc;
+  font-size: 14px;
+  font-family: inherit;
+  color: #1e293b;
+  box-sizing: border-box;
+  outline: none;
+  transition: 0.3s;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.input-group input:hover {
+  background: #e2e8f0;
+}
+
+.input-group input:focus {
+  background: white;
+  box-shadow: 0 0 0 2px #667eea, inset 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.input-wrapper:focus-within .input-icon {
+  color: #667eea;
+}
+
+.input-group input::placeholder {
+  color: #64748b;
+}
+
+/* Show/Hide Password Eye Toggle */
+.eye-toggle {
+  position: absolute;
+  right: 16px;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.eye-toggle:hover {
+  color: #667eea;
+}
+
+/* ==========================
+   LINKS & HOVER EFFECTS
+========================== */
+.login-links {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  margin-bottom: 25px; 
+  margin-top: 10px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 15px;
+}
+
+.signup-text { color: #64748b; }
+.signup-text a { color: #1e293b; font-weight: 600; text-decoration: none; transition: 0.2s; }
+.forgot-text { color: #64748b; text-decoration: none; transition: 0.2s; }
+
+.signup-text a:hover, .forgot-text:hover {
+  color: #6c63ff;
+}
+
+/* ==========================
+   BUTTONS
+========================== */
+.login-btn {
+  width: 100%;
+  padding: 16px;
+  border-radius: 50px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: block;
+  margin-top: 10px;
+  box-shadow: 0 8px 18px rgba(102, 126, 234, 0.35);
+  position: relative;
+  z-index: 1; 
+}
+
+/* Organic blur glow pulse */
+.login-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50px;
+  background: inherit;
+  filter: blur(12px);
+  opacity: 0.3;
+  z-index: -1;
+  transition: opacity 0.3s ease;
+}
+
+.login-btn:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 12px 25px rgba(102,126,234,0.45);
+}
+
+.login-btn:hover::after {
+  opacity: 0.7;
+}
+
+/* Support Text Footer */
+.support-text {
+  text-align: center;
+  margin-top: 40px;
+  font-size: 13px;
+  color: #94a3b8;
+}
+.support-text p { margin: 0 0 5px 0; }
+.support-text a { color: #667eea; text-decoration: none; font-weight: 500; transition: 0.2s; }
+.support-text a:hover { color: #844cbc; text-decoration: underline; }
+/* REMOVE browser default password eye */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+input[type="password"]::-webkit-credentials-auto-fill-button,
+input[type="password"]::-webkit-password-toggle-button {
+  display: none;
+}
+/* ==========================
+   RESPONSIVE DESIGN (Mobile)
+========================== */
+@media (max-width: 768px) {
+  .login-split-card { flex-direction: column; }
+  .login-left { width: 100%; min-height: 300px; }
+  .left-content { justify-content: center; align-items: center; text-align: center; padding: 40px 20px;}
+  .brand-logo { margin-bottom: 20px; }
+  .login-right { width: 100%; padding: 40px 20px; min-height: 60vh; }
+  .login-right::before { display: none; } 
+  .form-container { padding: 30px 20px; }
+}
