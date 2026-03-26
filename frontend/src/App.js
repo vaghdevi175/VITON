@@ -9,25 +9,16 @@ import ResetPassword from "./pages/resetpassword";
 
 function App() {
 
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-  const storedUser = localStorage.getItem("user");
-
-  try {
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+  const [user, setUser] = useState(() => {
+    try {
+      const storedUser = localStorage.getItem("user");
+      return storedUser ? JSON.parse(storedUser) : null;
+    } catch {
+      return null;
     }
-  } catch (error) {
-    console.error("Invalid user data, clearing...");
-    localStorage.removeItem("user");
-  }
+  });
 
-  setLoading(false);
-}, []);
-
-  if (loading) return <div>Loading...</div>;
+  if (user === undefined) return <div>Loading...</div>;
 
   return (
     <BrowserRouter>
@@ -43,9 +34,13 @@ function App() {
         <Route path="/reset-password" element={<ResetPassword />} />
 
         <Route
-          path="/dashboard"
-          element={user ? <Dashboard setUser={setUser} /> : <Navigate to="/" />}
-        />
+  path="/dashboard"
+  element={
+    user || window.location.search.includes("email")
+      ? <Dashboard setUser={setUser} />
+      : <Navigate to="/" />
+  }
+/>
 
       </Routes>
     </BrowserRouter>

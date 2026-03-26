@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import "../css/dashboard.css";
+import { useNavigate } from "react-router-dom";
 
 // Helper function to convert images to Base64 so they can be saved in LocalStorage
 const convertToBase64 = (file) => {
@@ -24,65 +25,138 @@ function Dashboard({ setUser }) {
   const [clothPreview, setClothPreview] = useState(null);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
-  
+  const isSaving = useRef(false);
   const [openMenuIndex, setOpenMenuIndex] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(null);
+  const [isResultMenuOpen, setIsResultMenuOpen] = useState(false);
 
-  const currentUser = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")) : "User";
+  const [currentUser, setCurrentUser] = useState(() => {
+  // 1. Check URL first (for Google Redirects)
+  const params = new URLSearchParams(window.location.search);
+  const emailParam = params.get("email");
+  if (emailParam) return emailParam;
+
+  // 2. Fallback to LocalStorage
+  const storedUser = localStorage.getItem("user");
+  return storedUser ? JSON.parse(storedUser) : "User";
+});
+  const navigate = useNavigate();
   const storageKey = `tryon-history-${currentUser}`;
-
   const [history, setHistory] = useState(() => {
-    const saved = localStorage.getItem(storageKey);
-    return saved ? JSON.parse(saved) : [];
-  });
+  try {
+    // If we have a user (from URL or Storage), fetch their specific history
+    const saved = localStorage.getItem(`tryon-history-${currentUser}`);
+    if (!saved) return [];
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
+});
+useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  const email = params.get("email");
 
-  useEffect(() => {
-    localStorage.setItem(storageKey, JSON.stringify(history));
-  }, [history, storageKey]);
+  if (email) {
+    localStorage.setItem("user", JSON.stringify(email));
+    setUser(email);
+    setCurrentUser(email);   // ✅ IMPORTANT
+    const newUserHistoryKey = `tryon-history-${email}`;
+    const savedHistory = localStorage.getItem(newUserHistoryKey);
+    if (savedHistory) {
+      setHistory(JSON.parse(savedHistory));
+    } else {
+      setHistory([]);
+    }
+    window.history.replaceState({}, document.title, "/dashboard");
+  } else {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser));
+    }
+  }
+}, []);
 
   const logout = () => {
-    localStorage.removeItem("user");
-    setUser(null);
-  };
+  localStorage.removeItem("user");
+  setUser(null);
+  navigate("/");   // 🔥 THIS LINE FIXES EVERYTHING
+};
 
   const handleTryOn = async () => {
-    if (!person || !cloth) {
-      alert("Please upload both the Person and Cloth images.");
-      return;
-    }
+  if (!person || !cloth) {
+    alert("Please upload both the Person and Cloth images.");
+    return;
+  }
+  
+  if (isSaving.current) return; // 🚀 prevent duplicate
+  isSaving.current = true;
 
-    setLoading(true);
-    setResult(null);
+  setLoading(true);
+  setResult(null);
 
-    const formData = new FormData();
-    formData.append("person", person);
-    formData.append("cloth", cloth);
+  const formData = new FormData();
+  formData.append("person", person);
+  formData.append("cloth", cloth);
+
+  try {
+    const res = await axios.post(
+      "http://127.0.0.1:5000/tryon",
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
+
+    const outputImage = res.data.result;
+    setResult(outputImage);
+
+    const newItem = {
+  person: personPreview,
+  cloth: clothPreview,
+  result: outputImage,
+  personName: person.name,
+  clothName: cloth.name
+};
+
+    setHistory((prev) => {
+  const updated = [newItem, ...prev];
+
+  localStorage.setItem(storageKey, JSON.stringify(updated));
+
+  return updated;
+});
+
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setLoading(false);
+    isSaving.current = false;
+  }
+};
+
+  const handleDownload = async (e) => {
+    e.stopPropagation();
+    //setIsResultMenuOpen(false); // Close menu on click
+    if (!result) return;
 
     try {
-      const res = await axios.post(
-        "http://127.0.0.1:5000/tryon",
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
+      // Force download by fetching the image as a blob
+      const response = await fetch(result);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
 
-      const outputImage = res.data.result;
-      setResult(outputImage);
-
-      // Save to history using the Base64 previews so they persist across page reloads
-      const newItem = {
-        person: personPreview,
-        cloth: clothPreview,
-        result: outputImage
-      };
-
-      setHistory((prev) => [newItem, ...prev]);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = "my-virtual-tryon.png";
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
-      console.error(error);
-      alert("Error connecting to the backend. Please ensure your Python server is running.");
-    } finally {
-      setLoading(false); 
+      console.error("Download failed:", error);
     }
   };
 
@@ -92,18 +166,24 @@ function Dashboard({ setUser }) {
   };
 
   const handleDeleteHistory = (e, index) => {
-    e.stopPropagation();
-    const newHistory = history.filter((_, i) => i !== index);
-    setHistory(newHistory);
-    setOpenMenuIndex(null);
-    
-    if (selectedIndex === index) {
-      setSelectedIndex(null);
-      setPersonPreview(null);
-      setClothPreview(null);
-      setResult(null);
-    }
-  };
+  e.stopPropagation();
+
+  const newHistory = (history || []).filter((_, i) => i !== index);
+
+  setHistory(newHistory);
+
+  // ✅ SAVE AFTER DELETE
+  localStorage.setItem(storageKey, JSON.stringify(newHistory));
+
+  setOpenMenuIndex(null);
+
+  if (selectedIndex === index) {
+    setSelectedIndex(null);
+    setPersonPreview(null);
+    setClothPreview(null);
+    setResult(null);
+  }
+};
 
   const handleShareHistory = async (e, item) => {
     e.stopPropagation();
@@ -124,10 +204,11 @@ function Dashboard({ setUser }) {
     }
   };
 
-  const handleCloseMenus = () => {
+ const handleCloseMenus = () => {
     setOpenMenuIndex(null);
     setIsUserMenuOpen(false);
-  };
+    setIsResultMenuOpen(false); // Add this line
+  };  
 
   return (
     <div className="dashboard-wrapper" onClick={handleCloseMenus}>
@@ -330,11 +411,69 @@ function Dashboard({ setUser }) {
             </div>
 
             {/* RESULT */}
+            {/* RESULT */}
             <div className="upload-box">
               <h3>Result</h3>
-              <div className="image-box result-box">
+              <div className="image-box result-box" style={{ position: 'relative' }}>
                 {result ? (
-                  <img src={result} alt="result"/>
+                  <>
+                    <img src={result} alt="result" />
+                    
+                    {/* 3-Dots Menu Button - Bottom Left */}
+                    {/* Direct Download Button - Bottom Left */}
+<button 
+  type="button"
+  style={{
+    position: 'absolute',
+    bottom: '10px',
+    right: '10px',
+    background: 'rgba(0, 0, 0, 0.6)',
+    color: 'white',
+    borderRadius: '50%',
+    width: '36px',
+    height: '36px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+    cursor: 'pointer',
+    border: 'none',
+    color: '#ffffff',
+    zIndex: '10,7',
+    transition: 'transform 0.2s ease, background 0.2s ease'
+  }}
+  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+  onClick={handleDownload}
+  title="Download Result"
+>
+  {/* Clean Feather SVG Download Icon */}
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+    <polyline points="7 10 12 15 17 10"></polyline>
+    <line x1="12" y1="15" x2="12" y2="3"></line>
+  </svg>
+</button>
+
+                    {/* Dropdown Menu */}
+                    {isResultMenuOpen && (
+                      <div 
+                        className="dropdown-menu" 
+                        style={{
+                          position: 'absolute',
+                          bottom: '50px',
+                          left: '10px',
+                          top: 'auto',
+                          right: 'auto',
+                          zIndex: 100
+                        }}
+                      >
+                        <div className="dropdown-item" onClick={handleDownload}>
+                          Download
+                        </div>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="upload-placeholder">
                     <span className="upload-icon">✨</span>

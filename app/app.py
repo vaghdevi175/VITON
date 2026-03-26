@@ -1,6 +1,7 @@
+import os
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
-import os
 import subprocess
 import shutil
 import sys
@@ -10,17 +11,31 @@ from pymongo import MongoClient
 import bcrypt
 from flask_mail import Mail, Message
 from dotenv import load_dotenv   # ✅ NEW
+from google_auth_oauthlib.flow import Flow
+import requests
+from flask import redirect
 
+from flask import session
 # ✅ Load environment variables
 load_dotenv()
 app = Flask(__name__)
+app.config.update(
+    SESSION_COOKIE_NAME='google-auth-session',
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',  # Crucial for cross-port redirects
+    SESSION_COOKIE_SECURE=False,    # Must be False for http://localhost
+)
 CORS(app)
+app.secret_key = "super_secret_key_123"
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = os.getenv("MAIL_USERNAME")
 app.config['MAIL_PASSWORD'] = os.getenv("MAIL_PASSWORD")
-
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+REDIRECT_URI = "http://localhost:5000/google-callback"
 
 
 mail = Mail(app)
@@ -63,7 +78,75 @@ def signup():
     })
 
     return jsonify({"message": "User created"})
+from flask import session
 
+import secrets
+
+@app.route("/google-login")
+def google_login():
+    flow = Flow.from_client_secrets_file(
+        "app/client_secret.json",
+        scopes=[
+            "openid",
+            "https://www.googleapis.com/auth/userinfo.email"
+        ]
+    )
+    flow.redirect_uri = REDIRECT_URI
+
+    # Generate the auth URL
+    auth_url, state = flow.authorization_url(
+        prompt='consent',
+        access_type='offline'
+    )
+
+    # CRITICAL: Store these in the session
+    session["state"] = state
+    session["code_verifier"] = flow.code_verifier 
+    session.modified = True  # Forces Flask to save the session
+    
+    return redirect(auth_url)
+
+@app.route("/google-callback")
+def google_callback():
+    state = session.get("state")
+    code_verifier = session.get("code_verifier")
+    
+    if not state:
+        return "State missing in session. Please login again.", 400
+
+    flow = Flow.from_client_secrets_file(
+        "app/client_secret.json",
+        scopes=["openid", "https://www.googleapis.com/auth/userinfo.email"],
+        state=state
+    )
+    flow.redirect_uri = REDIRECT_URI
+    
+    # Manually set the verifier before fetching
+    flow.code_verifier = code_verifier 
+
+    try:
+        # Pass the full URL and let the library parse it
+        flow.fetch_token(authorization_response=request.url)
+    except Exception as e:
+        # If this fails, the 'grant' (the code from Google) is already used or invalid
+        return f"Token Error: {str(e)}", 400
+
+    # ... rest of your logic
+
+    credentials = flow.credentials
+
+    # 4. Get User Info
+    userinfo = requests.get(
+        "https://www.googleapis.com/oauth2/v1/userinfo",
+        headers={"Authorization": f"Bearer {credentials.token}"}
+    ).json()
+
+    # Clear session after successful login to prevent reuse errors
+    session.pop("state", None)
+    session.pop("code_verifier", None)
+
+    email = userinfo.get("email")
+    return redirect(f"http://localhost:3000/dashboard?email={email}")
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -102,7 +185,7 @@ def forgot_password():
             sender="vaghdevipappala@gmail.com",
             recipients=[email]
         )
-
+        
         msg.body = f"""
 Hello,
 
@@ -110,14 +193,13 @@ You requested a password reset.
 
 Click the link below to reset your password:
 
-http://localhost:3000/reset-password
+http://localhost:3000/reset-password?email={email}
 
 If you did not request this, please ignore this email.
 
 Regards,
 Virtual Try-On Team
 """
-
         mail.send(msg)
 
         return jsonify({"message": "Reset email sent"})
@@ -216,12 +298,13 @@ def tryon():
     result_name = f"{person_id}_{cloth_base}.jpg"
 
     src = os.path.join(result_folder, result_name)
-    dst = os.path.join(RESULT_FOLDER, "output.jpg")
+    unique_name = f"{person_id}_{cloth_base}_{int(time.time())}.jpg"
+    dst = os.path.join(RESULT_FOLDER, unique_name)
 
     if os.path.exists(src):
         shutil.copy(src, dst)
 
-    result_url = f"http://localhost:5000/static/results/output.jpg?t={time.time()}"
+    result_url = f"http://localhost:5000/static/results/{unique_name}"
 
     history.insert_one({
         "person": person_name,
