@@ -1,6 +1,5 @@
 import email
 import os
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import subprocess
@@ -20,6 +19,9 @@ from flask import session
 # ✅ Load environment variables
 load_dotenv()
 import requests
+
+if os.environ.get("ALLOW_INSECURE_OAUTH_TRANSPORT", "").lower() in {"1", "true", "yes"}:
+    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
 ALIAS_URL = "https://huggingface.co/vaghdevipappala/viton-model/resolve/main/alias_final.pth"
 GMM_URL = "https://huggingface.co/vaghdevipappala/viton-model/resolve/main/gmm_final.pth"
@@ -49,14 +51,18 @@ def load_models_once():
         download_file(SEG_URL, "seg_final.pth")
         models_loaded = True
 app = Flask(__name__)
+is_production = os.environ.get("FLASK_ENV", "").lower() == "production"
 app.config.update(
     SESSION_COOKIE_NAME='google-auth-session',
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',  # Crucial for cross-port redirects
-    SESSION_COOKIE_SECURE=False,    # Must be False for http://localhost
+    SESSION_COOKIE_SECURE=is_production,
 )
 CORS(app)
-app.secret_key = "super_secret_key_123"
+app.secret_key = os.environ.get("FLASK_SECRET_KEY")
+if not app.secret_key:
+    app.secret_key = os.urandom(32).hex()
+    print("WARNING: FLASK_SECRET_KEY is not set. Generated ephemeral secret key for this process.")
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
@@ -73,6 +79,8 @@ mail = Mail(app)
 
 
 MONGO_URI = os.getenv("MONGO_URI")
+if not MONGO_URI:
+    raise RuntimeError("MONGO_URI is not set. Please configure it before starting the server.")
 
 client = MongoClient(MONGO_URI)
 db = client["virtual_tryon"]
