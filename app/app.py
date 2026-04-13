@@ -1,3 +1,4 @@
+import email
 import os
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 from flask import Flask, request, jsonify, render_template
@@ -18,6 +19,35 @@ from flask import redirect
 from flask import session
 # ✅ Load environment variables
 load_dotenv()
+import requests
+
+ALIAS_URL = "https://huggingface.co/vaghdevipappala/viton-model/resolve/main/alias_final.pth"
+GMM_URL = "https://huggingface.co/vaghdevipappala/viton-model/resolve/main/gmm_final.pth"
+SEG_URL = "https://huggingface.co/vaghdevipappala/viton-model/resolve/main/seg_final.pth"
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+CHECKPOINT_DIR = os.path.join(BASE_DIR, "viton", "checkpoints")
+os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+
+def download_file(url, filename):
+    filepath = os.path.join(CHECKPOINT_DIR, filename)
+    if not os.path.exists(filepath):
+        print(f"Downloading {filename}...")
+        r = requests.get(url, stream=True, timeout=60)
+        with open(filepath, "wb") as f:
+            for chunk in r.iter_content(8192):
+                f.write(chunk)
+    return filepath
+
+models_loaded = False
+
+def load_models_once():
+    global models_loaded
+    if not models_loaded:
+        download_file(ALIAS_URL, "alias_final.pth")
+        download_file(GMM_URL, "gmm_final.pth")
+        download_file(SEG_URL, "seg_final.pth")
+        models_loaded = True
 app = Flask(__name__)
 app.config.update(
     SESSION_COOKIE_NAME='google-auth-session',
@@ -35,7 +65,8 @@ app.config['MAIL_PASSWORD'] = os.getenv("MAIL_PASSWORD")
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-REDIRECT_URI = "http://localhost:5000/google-callback"
+BASE_URL = os.environ.get("BASE_URL", "http://localhost:5000")
+REDIRECT_URI = f"{BASE_URL}/google-callback"
 
 
 mail = Mail(app)
@@ -49,7 +80,7 @@ db = client["virtual_tryon"]
 users = db["users"]
 history = db["history"]
 
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
 
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "dataset", "test", "image")
 CLOTH_FOLDER = os.path.join(BASE_DIR, "dataset", "test", "cloth")
@@ -84,13 +115,14 @@ import secrets
 
 @app.route("/google-login")
 def google_login():
-    flow = Flow.from_client_secrets_file(
-        "app/client_secret.json",
-        scopes=[
-            "openid",
-            "https://www.googleapis.com/auth/userinfo.email"
-        ]
-    )
+    flow = Flow.from_client_config({
+    "web": {
+        "client_id": GOOGLE_CLIENT_ID,
+        "client_secret": GOOGLE_CLIENT_SECRET,
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token"
+    }
+})
     flow.redirect_uri = REDIRECT_URI
 
     # Generate the auth URL
@@ -114,11 +146,14 @@ def google_callback():
     if not state:
         return "State missing in session. Please login again.", 400
 
-    flow = Flow.from_client_secrets_file(
-        "app/client_secret.json",
-        scopes=["openid", "https://www.googleapis.com/auth/userinfo.email"],
-        state=state
-    )
+    flow = Flow.from_client_config({
+    "web": {
+        "client_id": GOOGLE_CLIENT_ID,
+        "client_secret": GOOGLE_CLIENT_SECRET,
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token"
+    }
+})
     flow.redirect_uri = REDIRECT_URI
     
     # Manually set the verifier before fetching
@@ -146,7 +181,8 @@ def google_callback():
     session.pop("code_verifier", None)
 
     email = userinfo.get("email")
-    return redirect(f"http://localhost:3000/dashboard?email={email}")
+    FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+    return redirect(f"{FRONTEND_URL}/dashboard?email={email}")
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -168,11 +204,8 @@ def login():
 
 @app.route("/forgot-password", methods=["POST"])
 def forgot_password():
-
     data = request.json
     email = data.get("email", "").strip()
-
-    print("Email received:", email)
 
     user = users.find_one({"email": email})
 
@@ -180,12 +213,14 @@ def forgot_password():
         return jsonify({"message": "Email not found"}), 404
 
     try:
+        FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+
         msg = Message(
             "Password Reset - Virtual TryOn",
             sender="vaghdevipappala@gmail.com",
             recipients=[email]
         )
-        
+
         msg.body = f"""
 Hello,
 
@@ -193,13 +228,14 @@ You requested a password reset.
 
 Click the link below to reset your password:
 
-http://localhost:3000/reset-password?email={email}
+{FRONTEND_URL}/reset-password?email={email}
 
 If you did not request this, please ignore this email.
 
 Regards,
 Virtual Try-On Team
 """
+
         mail.send(msg)
 
         return jsonify({"message": "Reset email sent"})
@@ -250,46 +286,71 @@ def home():
 @app.route("/tryon", methods=["POST"])
 def tryon():
     print("TRYON API HIT")
-
+    load_models_once()
     person = request.files.get("person")
     cloth = request.files.get("cloth")
 
     if not person or not cloth:
         return jsonify({"error": "person or cloth file missing"}), 400
 
+    # 🔥 Get filenames
     person_name = secure_filename(person.filename)
     cloth_name = secure_filename(cloth.filename)
 
+    # 🔥 Dataset folders
+    valid_persons = os.listdir(UPLOAD_FOLDER)
+    valid_cloths = os.listdir(CLOTH_FOLDER)
+
+    # 🚨 VALIDATION (VERY IMPORTANT)
+    if person_name not in valid_persons:
+        return jsonify({
+            "error": f"{person_name} not found in dataset images"
+        }), 400
+
+    if cloth_name not in valid_cloths:
+        return jsonify({
+            "error": f"{cloth_name} not found in dataset cloths"
+        }), 400
+
+    print(f"Using dataset files: {person_name}, {cloth_name}")
+
+    # 🔥 OPTIONAL: overwrite existing (safe)
     person_path = os.path.join(UPLOAD_FOLDER, person_name)
     cloth_path = os.path.join(CLOTH_FOLDER, cloth_name)
 
     person.save(person_path)
     cloth.save(cloth_path)
 
+    # 🔥 Write pair file (VERY IMPORTANT)
     pairs_path = os.path.join(BASE_DIR, "dataset", "test_pairs.txt")
 
     with open(pairs_path, "w") as f:
         f.write(f"{person_name} {cloth_name}\n")
 
+    # 🔥 Clean previous results
     result_dir = os.path.join(BASE_DIR, "results", "demo")
     shutil.rmtree(result_dir, ignore_errors=True)
     os.makedirs(result_dir, exist_ok=True)
 
+    # 🔥 Run model
     process = subprocess.run(
-    [
-        sys.executable,
-        os.path.join(BASE_DIR, "viton", "test.py"),
-        "--name", "demo",
-        "--dataset_dir", os.path.join(BASE_DIR, "dataset"),
-        "--checkpoint_dir", os.path.join(BASE_DIR, "viton", "checkpoints"),
-        "--load_height", "1024",
-        "--load_width", "768"
-    ],
-    capture_output=True,
-    text=True
-)
+        [
+            sys.executable,
+            os.path.join(BASE_DIR, "viton", "test.py"),
+            "--name", "demo",
+            "--dataset_dir", os.path.join(BASE_DIR, "dataset"),
+            "--checkpoint_dir", CHECKPOINT_DIR,
+            "--load_height", "1024",
+            "--load_width", "768"
+        ],
+        capture_output=True,
+        text=True
+    )
 
+    print("MODEL OUTPUT:", process.stdout)
+    print("MODEL ERROR:", process.stderr)
 
+    # 🔥 Get result
     result_folder = os.path.join(BASE_DIR, "results", "demo")
 
     person_id = person_name.split("_")[0]
@@ -298,14 +359,20 @@ def tryon():
     result_name = f"{person_id}_{cloth_base}.jpg"
 
     src = os.path.join(result_folder, result_name)
+
     unique_name = f"{person_id}_{cloth_base}_{int(time.time())}.jpg"
     dst = os.path.join(RESULT_FOLDER, unique_name)
 
-    if os.path.exists(src):
-        shutil.copy(src, dst)
+    if not os.path.exists(src):
+        return jsonify({"error": "Result not generated"}), 500
 
-    result_url = f"http://localhost:5000/static/results/{unique_name}"
+    shutil.copy(src, dst)
 
+    # 🔥 FIXED URL (for deployment)
+    BASE_URL = os.environ.get("BASE_URL", "http://localhost:5000")
+    result_url = f"{BASE_URL}/static/results/{unique_name}"
+
+    # 🔥 Save history
     history.insert_one({
         "person": person_name,
         "cloth": cloth_name,
@@ -319,4 +386,5 @@ def tryon():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, use_reloader=False)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
