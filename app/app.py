@@ -5,6 +5,7 @@ import subprocess
 import shutil
 import sys
 import time
+from scipy.fft import dst
 from werkzeug.utils import secure_filename
 from pymongo import MongoClient
 import bcrypt
@@ -49,7 +50,7 @@ def load_models_once():
         download_file(GMM_URL, "gmm_final.pth")
         download_file(SEG_URL, "seg_final.pth")
         models_loaded = True
-app = Flask(__name__)
+app = Flask(__name__, static_folder="app/static")
 is_production = os.environ.get("FLASK_ENV", "").lower() == "production"
 app.config.update(
     SESSION_COOKIE_NAME='google-auth-session',
@@ -401,16 +402,15 @@ def tryon():
         "result": result_url,
         "time": time.time()
     })
-
+    print("Saved to:", dst)
+    print("Exists:", os.path.exists(dst))
     return jsonify({
     "result": result_url
 })
 
 from flask import send_from_directory
 
-@app.route('/static/results/<filename>')
-def serve_result(filename):
-    return send_from_directory(RESULT_FOLDER, filename)
+
 
 @app.after_request
 def after_request(response):
