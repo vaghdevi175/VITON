@@ -392,9 +392,9 @@ def tryon():
 
     if not os.path.exists(src):
         print("Model failed, using fallback image")
-    return jsonify({
-        "result": "https://images.unsplash.com/photo-1521335629791-ce4aec67dd53"
-    })
+        return jsonify({
+            "result": "https://images.unsplash.com/photo-1521335629791-ce4aec67dd53"
+        })
 
     shutil.copy(src, dst)
 
@@ -412,6 +412,11 @@ def tryon():
 
     return jsonify({"result": result_url})
 
+from flask import send_from_directory
+
+@app.route('/static/results/<filename>')
+def serve_result(filename):
+    return send_from_directory(RESULT_FOLDER, filename)
 
 
 
