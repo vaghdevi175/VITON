@@ -1,0 +1,14 @@
+Flask
+flask-cors
+pymongo
+bcrypt
+flask-mail
+python-dotenv
+google-auth-oauthlib
+requests
+torch
+torchvision
+torchaudio
+torchgeometry
+Pillow
+numpy
