@@ -288,7 +288,7 @@ def get_history():
 
 @app.route("/")
 def home():
-    return render_template("index.html")
+    return "Backend is running successfully 🚀"
 
 
 @app.route("/tryon", methods=["POST"])
