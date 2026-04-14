@@ -333,23 +333,12 @@ def tryon():
     valid_persons = os.listdir(UPLOAD_FOLDER)
     valid_cloths = os.listdir(CLOTH_FOLDER)
 
-    # 🚨 VALIDATION (VERY IMPORTANT)
-    if person_name not in valid_persons:
-        return jsonify({
-            "error": f"{person_name} not found in dataset images"
-        }), 400
-
-    if cloth_name not in valid_cloths:
-        return jsonify({
-            "error": f"{cloth_name} not found in dataset cloths"
-        }), 400
-
-    print(f"Using dataset files: {person_name}, {cloth_name}")
 
     # 🔥 OPTIONAL: overwrite existing (safe)
     person_path = os.path.join(UPLOAD_FOLDER, person_name)
     cloth_path = os.path.join(CLOTH_FOLDER, cloth_name)
-
+    person.save(os.path.join(UPLOAD_FOLDER, person_name))
+    cloth.save(os.path.join(CLOTH_FOLDER, cloth_name))
 
     # 🔥 Write pair file (VERY IMPORTANT)
     pairs_path = os.path.join(BASE_DIR, "dataset", "test_pairs.txt")
@@ -413,7 +402,9 @@ def tryon():
         "time": time.time()
     })
 
-    return jsonify({"result": result_url})
+    return jsonify({
+    "result": result_url
+})
 
 from flask import send_from_directory
 
