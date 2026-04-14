@@ -49,7 +49,12 @@ def load_models_once():
         download_file(GMM_URL, "gmm_final.pth")
         download_file(SEG_URL, "seg_final.pth")
         models_loaded = True
-app = Flask(__name__, static_folder="app/static")
+# This forces Flask to use the exact same absolute path where your images are saved
+app = Flask(
+    __name__, 
+    static_folder=os.path.join(BASE_DIR, "app", "static"),
+    static_url_path="/static"
+)
 is_production = os.environ.get("FLASK_ENV", "").lower() == "production"
 app.config.update(
     SESSION_COOKIE_NAME='google-auth-session',
@@ -407,16 +412,6 @@ def tryon():
     "result": result_url
 })
 
-from flask import send_from_directory
-
-
-
-@app.after_request
-def after_request(response):
-    response.headers.add("Access-Control-Allow-Origin", "*")
-    response.headers.add("Access-Control-Allow-Headers", "*")
-    response.headers.add("Access-Control-Allow-Methods", "*")
-    return response
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
