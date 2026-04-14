@@ -54,7 +54,7 @@ app = Flask(
     __name__, 
     static_folder=os.path.join(BASE_DIR, "app", "static"),
     static_url_path="/static"
-)
+)   
 is_production = os.environ.get("FLASK_ENV", "").lower() == "production"
 app.config.update(
     SESSION_COOKIE_NAME='google-auth-session',
@@ -411,6 +411,14 @@ def tryon():
     return jsonify({
     "result": result_url
 })
+
+
+@app.after_request
+def after_request(response):
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Headers", "*")
+    response.headers.add("Access-Control-Allow-Methods", "*")
+    return response
 
 
 if __name__ == "__main__":
