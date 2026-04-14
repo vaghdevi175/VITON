@@ -329,8 +329,6 @@ def tryon():
     person_path = os.path.join(UPLOAD_FOLDER, person_name)
     cloth_path = os.path.join(CLOTH_FOLDER, cloth_name)
 
-    person.save(person_path)
-    cloth.save(cloth_path)
 
     # 🔥 Write pair file (VERY IMPORTANT)
     pairs_path = os.path.join(BASE_DIR, "dataset", "test_pairs.txt")
