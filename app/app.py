@@ -1,5 +1,4 @@
 import email
-import os
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import subprocess
@@ -14,14 +13,14 @@ from dotenv import load_dotenv   # ✅ NEW
 from google_auth_oauthlib.flow import Flow
 import requests
 from flask import redirect
+import os
+os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
 from flask import session
 # ✅ Load environment variables
 load_dotenv()
 import requests
 
-if os.environ.get("ALLOW_INSECURE_OAUTH_TRANSPORT", "").lower() in {"1", "true", "yes"}:
-    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
 ALIAS_URL = "https://huggingface.co/vaghdevipappala/viton-model/resolve/main/alias_final.pth"
 GMM_URL = "https://huggingface.co/vaghdevipappala/viton-model/resolve/main/gmm_final.pth"
@@ -71,7 +70,7 @@ app.config['MAIL_PASSWORD'] = os.getenv("MAIL_PASSWORD")
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-BASE_URL = os.environ.get("BASE_URL", "http://localhost:5000")
+BASE_URL = "https://viton-backend.onrender.com"
 REDIRECT_URI = f"{BASE_URL}/google-callback"
 
 
