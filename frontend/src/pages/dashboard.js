@@ -17,6 +17,16 @@ const convertToBase64 = (file) => {
   });
 };
 
+const normalizeResultUrl = (value) => {
+  if (!value || typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("data:image/")) return trimmed;
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+  if (trimmed.startsWith("/")) return `https://viton-backend.onrender.com${trimmed}`;
+  return null;
+};
+
 function Dashboard({ setUser }) {
   const [person, setPerson] = useState(null);
   const [cloth, setCloth] = useState(null);
@@ -108,7 +118,11 @@ useEffect(() => {
       { headers: { "Content-Type": "multipart/form-data" } }
     );
 
-    const outputImage = res.data.result;
+    const outputImage = normalizeResultUrl(res.data.result);
+    if (!outputImage) {
+      alert("Generated image URL is invalid. Please try again.");
+      return;
+    }
     setResult(outputImage);
 
     const newItem = {
@@ -129,6 +143,9 @@ useEffect(() => {
 
   } catch (error) {
     console.error(error);
+    const apiMessage = error?.response?.data?.error;
+    const apiDetails = error?.response?.data?.details;
+    alert(apiMessage ? `${apiMessage}${apiDetails ? `: ${apiDetails}` : ""}` : "Try-on request failed. Please try again.");
   } finally {
     setLoading(false);
     isSaving.current = false;
@@ -417,7 +434,14 @@ useEffect(() => {
               <div className="image-box result-box" style={{ position: 'relative' }}>
                 {result ? (
                   <>
-                    <img src={result} alt="result" />
+                    <img
+                      src={result}
+                      alt="result"
+                      onError={() => {
+                        setResult(null);
+                        alert("Result image could not be loaded. Please try again.");
+                      }}
+                    />
                     
                     {/* 3-Dots Menu Button - Bottom Left */}
                     {/* Direct Download Button - Bottom Left */}

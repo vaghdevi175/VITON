@@ -14,6 +14,7 @@ from google_auth_oauthlib.flow import Flow
 import requests
 from flask import redirect
 import os
+from pathlib import Path
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
 from flask import session
@@ -377,22 +378,41 @@ def tryon():
     # 🔥 Get result
     result_folder = os.path.join(BASE_DIR, "results", "demo")
 
-    person_id = person_name.split("_")[0]
-    cloth_base = cloth_name.replace(".jpg", "")
+    person_stem = Path(person_name).stem
+    cloth_stem = Path(cloth_name).stem
+    person_prefix = person_name.split("_")[0]
+    expected_name = f"{person_prefix}_{cloth_name}"
+    expected_path = os.path.join(result_folder, expected_name)
 
-    result_name = f"{person_id}_{cloth_base}.jpg"
+    if os.path.exists(expected_path):
+        src = expected_path
+    else:
+        generated_images = sorted(
+            [
+                os.path.join(result_folder, file_name)
+                for file_name in os.listdir(result_folder)
+                if file_name.lower().endswith((".jpg", ".jpeg", ".png"))
+            ],
+            key=os.path.getmtime,
+            reverse=True,
+        )
+        src = generated_images[0] if generated_images else None
 
-    src = os.path.join(result_folder, result_name)
-
-    unique_name = f"{person_id}_{cloth_base}_{int(time.time())}.jpg"
-    dst = os.path.join(RESULT_FOLDER, unique_name)
-
-    if not os.path.exists(src):
-        print("Model failed, using fallback image")
+    if process.returncode != 0:
         return jsonify({
-            "result": "https://images.unsplash.com/photo-1521335629791-ce4aec67dd53"
-        })
+            "error": "Try-on model execution failed",
+            "details": process.stderr[-1000:]
+        }), 500
 
+    if not src or not os.path.exists(src):
+        print("Model failed to generate an output image.")
+        return jsonify({
+            "error": "Try-on generation failed",
+            "details": f"Expected {expected_name} in {result_folder}"
+        }), 500
+
+    unique_name = f"{person_stem}_{cloth_stem}_{int(time.time())}.jpg"
+    dst = os.path.join(RESULT_FOLDER, unique_name)
     shutil.copy(src, dst)
 
     # 🔥 FIXED URL (for deployment)
