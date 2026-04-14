@@ -399,7 +399,7 @@ def tryon():
     shutil.copy(src, dst)
 
     # 🔥 FIXED URL (for deployment)
-    BASE_URL = os.environ.get("BASE_URL", "http://localhost:5000")
+    BASE_URL = "https://viton-backend.onrender.com"
     result_url = f"{BASE_URL}/static/results/{unique_name}"
 
     # 🔥 Save history
