@@ -123,29 +123,33 @@ import secrets
 
 @app.route("/google-login")
 def google_login():
-    flow = Flow.from_client_config({
-    "web": {
-        "client_id": GOOGLE_CLIENT_ID,
-        "client_secret": GOOGLE_CLIENT_SECRET,
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-        "token_uri": "https://oauth2.googleapis.com/token",
-        "redirect_uris": [REDIRECT_URI] 
-    }
-})
-    flow.redirect_uri = REDIRECT_URI
+    try:
+        flow = Flow.from_client_config({
+            "web": {
+                "client_id": GOOGLE_CLIENT_ID,
+                "client_secret": GOOGLE_CLIENT_SECRET,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": [REDIRECT_URI]
+            }
+        })
 
-    # Generate the auth URL
-    auth_url, state = flow.authorization_url(
-        prompt='consent',
-        access_type='offline'
-    )
+        flow.redirect_uri = REDIRECT_URI
 
-    # CRITICAL: Store these in the session
-    session["state"] = state
-    session["code_verifier"] = flow.code_verifier 
-    session.modified = True  # Forces Flask to save the session
-    
-    return redirect(auth_url)
+        auth_url, state = flow.authorization_url(
+            prompt='consent',
+            access_type='offline'
+        )
+
+        session["state"] = state
+        session["code_verifier"] = flow.code_verifier
+        session.modified = True
+
+        return redirect(auth_url)
+
+    except Exception as e:
+        return f"ERROR: {str(e)}", 500
+
 
 @app.route("/google-callback")
 def google_callback():
