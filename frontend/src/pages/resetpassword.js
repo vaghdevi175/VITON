@@ -26,7 +26,7 @@ function ResetPassword() {
 
     try {
       // 2. Send the extracted email to the backend
-      await axios.post("http://localhost:5000/reset-password", {
+      await axios.post("https://viton-backend.onrender.com/reset-password", {
         email: userEmail,
         password
       });

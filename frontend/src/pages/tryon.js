@@ -22,7 +22,7 @@ function TryOn() {
   try {
 
     const res = await axios.post(
-      "http://localhost:5000/tryon",
+      "https://viton-backend.onrender.com/tryon",
       formData,
       { headers: { "Content-Type": "multipart/form-data" } }
     );

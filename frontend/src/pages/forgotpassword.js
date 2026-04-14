@@ -11,7 +11,7 @@ function ForgotPassword() {
     try {
 
       await axios.post(
-        "http://localhost:5000/forgot-password",
+        "https://viton-backend.onrender.com/forgot-password",
         { email }
       );
 

@@ -29,7 +29,7 @@ function Login({ setUser }) {
   const handleLogin = async () => {
     try {
       const res = await axios.post(
-        "http://localhost:5000/login",
+        "https://viton-backend.onrender.com/login",
         { email, password }
       );
       localStorage.setItem("user", JSON.stringify(res.data.email));
@@ -46,7 +46,7 @@ function Login({ setUser }) {
       return;
     }
     try {
-      await axios.post("http://localhost:5000/signup", {
+      await axios.post("https://viton-backend.onrender.com/signup", {
         email: signupEmail,
         password: signupPassword
       });
@@ -62,7 +62,7 @@ function Login({ setUser }) {
       return;
     }
     try {
-      await axios.post("http://localhost:5000/forgot-password", { 
+      await axios.post("https://viton-backend.onrender.com/forgot-password", { 
         email: forgotEmail 
       });
       
@@ -176,7 +176,7 @@ function Login({ setUser }) {
 
                 <button 
                   className="google-modern-btn"
-                  onClick={() => window.location.href = "http://localhost:5000/google-login"}
+                  onClick={() => window.location.href = "https://viton-backend.onrender.com/google-login"}
                 >
                   <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="google" />
                   <span>Continue with Google</span>
