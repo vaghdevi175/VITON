@@ -77,7 +77,7 @@ useEffect(() => {
       setCurrentUser(JSON.parse(storedUser));
     }
   }
-}, []);
+}, [setUser]);
 
   const logout = () => {
   localStorage.removeItem("user");
@@ -428,7 +428,6 @@ useEffect(() => {
     bottom: '10px',
     right: '10px',
     background: 'rgba(0, 0, 0, 0.6)',
-    color: 'white',
     borderRadius: '50%',
     width: '36px',
     height: '36px',
@@ -439,7 +438,7 @@ useEffect(() => {
     cursor: 'pointer',
     border: 'none',
     color: '#ffffff',
-    zIndex: '10,7',
+    zIndex: '10',
     transition: 'transform 0.2s ease, background 0.2s ease'
   }}
   onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
