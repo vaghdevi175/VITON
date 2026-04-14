@@ -57,7 +57,9 @@ app.config.update(
     SESSION_COOKIE_SAMESITE='Lax',  # Crucial for cross-port redirects
     SESSION_COOKIE_SECURE=is_production,
 )
-CORS(app)
+CORS(app, supports_credentials=True, origins=[
+    "https://viton-frontend-5uexsoooe-vaghdevi175s-projects.vercel.app"
+])
 app.secret_key = os.environ.get("FLASK_SECRET_KEY")
 if not app.secret_key:
     app.secret_key = os.urandom(32).hex()
@@ -119,6 +121,7 @@ def signup():
 from flask import session
 
 import secrets
+
 
 @app.route("/google-login")
 def google_login():
@@ -418,7 +421,12 @@ from flask import send_from_directory
 def serve_result(filename):
     return send_from_directory(RESULT_FOLDER, filename)
 
-
+@app.after_request
+def after_request(response):
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Headers", "*")
+    response.headers.add("Access-Control-Allow-Methods", "*")
+    return response
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
