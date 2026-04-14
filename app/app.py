@@ -5,7 +5,6 @@ import subprocess
 import shutil
 import sys
 import time
-from scipy.fft import dst
 from werkzeug.utils import secure_filename
 from pymongo import MongoClient
 import bcrypt
