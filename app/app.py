@@ -412,7 +412,7 @@ def tryon():
     "result": result_url
 })
 
-
+# ❌ DELETE THIS ENTIRE BLOCK ❌
 @app.after_request
 def after_request(response):
     response.headers.add("Access-Control-Allow-Origin", "*")
