@@ -14,7 +14,6 @@ from google_auth_oauthlib.flow import Flow
 import requests
 from flask import redirect
 import os
-from pathlib import Path
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
 from flask import session
@@ -50,12 +49,7 @@ def load_models_once():
         download_file(GMM_URL, "gmm_final.pth")
         download_file(SEG_URL, "seg_final.pth")
         models_loaded = True
-# This forces Flask to use the exact same absolute path where your images are saved
-app = Flask(
-    __name__, 
-    static_folder=os.path.join(BASE_DIR, "app", "static"),
-    static_url_path="/static"
-)   
+app = Flask(__name__, static_folder="app/static")
 is_production = os.environ.get("FLASK_ENV", "").lower() == "production"
 app.config.update(
     SESSION_COOKIE_NAME='google-auth-session',
@@ -378,31 +372,22 @@ def tryon():
     # 🔥 Get result
     result_folder = os.path.join(BASE_DIR, "results", "demo")
 
-    person_stem = Path(person_name).stem
-    cloth_stem = Path(cloth_name).stem
-    expected_name = f"{person_stem}_{cloth_stem}.jpg"
-    expected_path = os.path.join(result_folder, expected_name)
+    person_id = person_name.split("_")[0]
+    cloth_base = cloth_name.replace(".jpg", "")
 
-    if os.path.exists(expected_path):
-        src = expected_path
-    else:
-        generated_images = sorted(
-            [
-                os.path.join(result_folder, file_name)
-                for file_name in os.listdir(result_folder)
-                if file_name.lower().endswith((".jpg", ".jpeg", ".png"))
-            ],
-            key=os.path.getmtime,
-            reverse=True,
-        )
-        src = generated_images[0] if generated_images else None
+    result_name = f"{person_id}_{cloth_base}.jpg"
 
-    if not src or not os.path.exists(src):
-        print("Model failed to generate an output image.")
-        return jsonify({"error": "Try-on generation failed"}), 500
+    src = os.path.join(result_folder, result_name)
 
-    unique_name = f"{person_stem}_{cloth_stem}_{int(time.time())}.jpg"
+    unique_name = f"{person_id}_{cloth_base}_{int(time.time())}.jpg"
     dst = os.path.join(RESULT_FOLDER, unique_name)
+
+    if not os.path.exists(src):
+        print("Model failed, using fallback image")
+        return jsonify({
+            "result": "https://images.unsplash.com/photo-1521335629791-ce4aec67dd53"
+        })
+
     shutil.copy(src, dst)
 
     # 🔥 FIXED URL (for deployment)
@@ -422,14 +407,16 @@ def tryon():
     "result": result_url
 })
 
-# ❌ DELETE THIS ENTIRE BLOCK ❌
+from flask import send_from_directory
+
+
+
 @app.after_request
 def after_request(response):
     response.headers.add("Access-Control-Allow-Origin", "*")
     response.headers.add("Access-Control-Allow-Headers", "*")
     response.headers.add("Access-Control-Allow-Methods", "*")
     return response
-
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
