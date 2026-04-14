@@ -290,6 +290,9 @@ def get_history():
 def home():
     return "Backend is running successfully 🚀"
 
+@app.route("/test")
+def test():
+    return {"message": "API working 🔥"}
 
 @app.route("/tryon", methods=["POST"])
 def tryon():
