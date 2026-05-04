@@ -9,7 +9,7 @@ A full-stack AI-powered web application that allows users to virtually try on cl
 * 📸 Upload user image
 * 👕 Select clothing item
 * 🤖 AI-based virtual try-on using deep learning
-* ⚡ Real-time processing via Flask backend
+* ⚡ processing via Flask backend
 * 🎨 Modern and responsive UI (React)
 * 📂 Organized dataset handling (pose, mask, parse)
 * 🖼️ Generated output preview
