@@ -143,6 +143,9 @@ useEffect(() => {
 
   } catch (error) {
     console.error(error);
+    const apiMessage = error?.response?.data?.error;
+    const apiDetails = error?.response?.data?.details;
+    alert(apiMessage ? `${apiMessage}${apiDetails ? `: ${apiDetails}` : ""}` : "Try-on request failed. Please try again.");
   } finally {
     setLoading(false);
     isSaving.current = false;
